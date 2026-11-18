@@ -302,9 +302,11 @@ Si la página de identidad es de un tercero (Cloudflare Access, Google,
 Microsoft) no se puede hacer: no hay forma de publicar el `assetlinks.json` en
 un nombre ajeno. Esa pantalla se verá siempre con barra, y es lo correcto.
 
-## Avisos del análisis estático
+## Avisos conocidos de la compilación
 
-`lint` termina con 0 errores y estos avisos, que son esperados:
+El análisis estático (`lint`) termina con 0 errores y siete avisos, que son
+esperados. En GitHub se leen en el paso «Informe del análisis estático»; en un
+ordenador, en `app/build/reports/lint-results-debug.html`.
 
 | Aviso | Por qué se deja |
 |---|---|
@@ -315,3 +317,9 @@ un nombre ajeno. Esa pantalla se verá siempre con barra, y es lo correcto.
 | `MonochromeLauncherIcon` | No hay versión monocroma del icono para los «iconos con tema» de Android 13 y posteriores. |
 
 Si aparece alguno que no esté en esta tabla, hay que leerlo.
+
+Además, Gradle termina cada compilación con el aviso *Deprecated Gradle
+features were used in this build, making it incompatible with Gradle 10*. No
+viene de los ficheros de este repositorio sino del plugin de Android
+(`Configuration.setVisible`), y desaparecerá cuando el plugin lo corrija. No
+impide nada hoy.

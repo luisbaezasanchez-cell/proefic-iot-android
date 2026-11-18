@@ -191,11 +191,14 @@ secretos de verdad.
 
 **D16. Comprobación de almacenes de claves.** Un guion de shell,
 `ci/comprobar-claves.sh`, que mira los ficheros que git tiene registrados:
-falla por extensión (`.jks`, `.keystore`, `.p12`, `.pfx`…), por contenido (la
-cabecera de un almacén JKS) y por texto (`PRIVATE KEY`). Además, `.gitignore`
-impide añadirlos por descuido.
+falla por extensión (`.jks`, `.keystore`, `.p12`, `.pfx`…), por contenido (los
+primeros bytes de un almacén JKS o PKCS12, aunque se haya renombrado) y por
+texto (la cabecera de una clave privada PEM). Además, `.gitignore` impide
+añadirlos por descuido. Mira el estado del repositorio en cada subida, no el
+historial: un PKCS12 de más de 64 KB o cifrado de otra forma se le escaparía
+si además no lleva una extensión conocida.
 
-**D17. Comprobación de permisos.** `ci/comprobar-permisos.sh` lee los permisos
+**D17. Comprobación de permisos.** `ci/comprobar-apk.sh` lee los permisos
 del APK ya compilado y falla si aparece alguno que no esté en la lista. No
 estaba en el encargo, pero «ningún permiso de más» depende de lo que cada
 biblioteca añada por su cuenta al mezclar manifests, y eso cambia con cada
@@ -250,6 +253,157 @@ oficial de Gradle 9.9.1
 
 ---
 
-## 2. Entrega
+## 2. Entrega — versión 1.0.0 (18-11-2026)
 
-*Pendiente: se escribe al terminar.*
+### 2.1 Qué hay
+
+Una rama, `claude/quirky-archimedes-21i6ml`, sin unir a `main` y sin *pull
+request*. Contiene el proyecto Android, los dos workflows, tres guiones y la
+documentación. La integración continua está en verde: compila el APK de
+depuración con el nivel de API 36 y lo deja para descargar.
+
+**Nadie ha instalado esta app en un móvil.** Ni yo, que no tengo cómo, ni
+nadie más todavía. Todo lo que solo se ve en un móvil está sin probar (2.4).
+
+### 2.2 Qué cambió respecto al diseño
+
+| Diseño inicial | Lo que hay | Por qué |
+|---|---|---|
+| Un permiso | Dos: se añade `REORDER_TASKS`, y `FocusActivity` va exportada | Lo pide la documentación de la biblioteca para traer la app al frente al tocar un aviso (D6). *Por confirmar.* |
+| La firma, en pasos del workflow | En un guion, `ci/construir-aab.sh` | Para poder ensayarla sin los secretos de verdad (D15). |
+| `lint { textReport = true }` | Un paso de la CI que copia el informe al registro | Esa opción está obsoleta en el plugin 9.5. |
+| `ci/comprobar-permisos.sh` | `ci/comprobar-apk.sh` | Además de los permisos enseña la ficha del APK. |
+
+### 2.3 Qué se ha comprobado
+
+En GitHub Actions, máquina `ubuntu-24.04`, sobre esta rama:
+
+| Qué | Resultado |
+|---|---|
+| `./gradlew lint assembleDebug` con plugin 9.5.1, Gradle 9.9.1 y JDK 17 | Compila. Todas las ejecuciones del workflow «CI» en esta rama han terminado en verde, desde la primera. |
+| Análisis estático | `0 errors, 7 warnings`. Los siete avisos están explicados en el README. |
+| Ficha del APK, leída del propio fichero con `aapt2` | Paquete `es.proefic.iot`, versión 1.0.0 (código 1), Android mínimo 24, objetivo 36, nombre «Proefic IoT», portal `https://app.proefic.com/`. |
+| Permisos del APK | `POST_NOTIFICATIONS`, `REORDER_TASKS` y el interno de AndroidX (`es.proefic.iot.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`). Ninguno más. |
+| `asset_statements` dentro del APK | JSON correcto, con `https://app.proefic.com`. |
+| Manifest final | A lo nuestro se suman dos actividades de la biblioteca para accesos directos, el arranque de AndroidX y la consulta de qué navegadores hay. Ningún permiso. |
+| `ci/construir-aab.sh` con una clave desechable creada en la propia máquina (ejecución 44382714086, workflow temporal ya borrado) | Sin secretos se para sin construir. Con contraseña equivocada se para antes de compilar. Con una clave válida, `bundleRelease` compila, firma, y la huella leída del `.aab` coincide con la de la clave. |
+| Qué pasa sin clave | `bundleRelease` deja un `.aab` sin firmar. Por eso el guion comprueba la firma. |
+| Aviso de Gradle sobre funciones obsoletas (ejecución 44383300838) | Viene del plugin de Android, no de este repositorio. |
+
+En el contenedor de la sesión:
+
+| Qué | Resultado |
+|---|---|
+| `ci/comprobar-claves.sh` contra un repositorio de prueba | Detecta los seis casos (JKS y PKCS12 por extensión y renombrados, una clave PEM) y no señala una imagen, un texto ni un certificado público. |
+| La orden de `keytool` de docs/PUBLICAR.md | Crea el almacén. El secreto se decodifica bien aunque se pegue con saltos de línea de Windows. |
+| `gradle-wrapper.jar` | Su SHA-256 es el que publica Gradle para la 9.9.1. |
+| Icono de los avisos | Mirado ampliado sobre fondo claro y oscuro. |
+| Los tres PNG del portal | Copia idéntica, byte a byte. El repositorio del portal no se ha modificado. |
+
+Las claves de estas pruebas eran desechables, se crearon en directorios
+temporales y no están en el repositorio ni en la conversación.
+
+### 2.4 Qué no se ha comprobado
+
+- **Nada en un móvil.** Que abra sin barra, la pantalla de arranque, los
+  colores, el recorte del icono, que llegue un aviso y cómo se ve, que al
+  tocarlo se abra, los enlaces, la cámara, el arranque sin red, el botón atrás
+  y el giro. Es la lista del paso 9 de docs/PUBLICAR.md.
+- **El workflow `publicacion.yml` nunca se ha ejecutado.** Solo se puede
+  lanzar desde `main` o con una etiqueta, y necesita los secretos. Sí se ha
+  ejecutado su guion; del fichero del workflow solo sé que es YAML válido.
+- **No se ha compilado en un ordenador**, solo en GitHub. El contenedor de la
+  sesión no puede bajar el SDK de Android (`dl.google.com` bloqueado).
+- **Si `REORDER_TASKS` hace falta**, y si no declarar
+  `ManageDataLauncherActivity` falla de verdad. Las dos cosas salen de leer el
+  código de la biblioteca, no de verlas ocurrir.
+- **La orden de Chrome para ver el APK de depuración sin barra** (README).
+- **Los datos de la consola de Play**: límites de texto, medidas de los
+  gráficos, D-U-N-S, formularios. Vienen de extractos de un buscador sobre la
+  ayuda de Play, que no pude abrir. Lo mismo la política *Bypass* de
+  Cloudflare. Los nombres de los menús de la consola son orientativos.
+- **El nombre definitivo**, `app.proefic.es`.
+
+### 2.5 Por confirmar
+
+Decisiones tomadas por lo más sencillo. Cada una se cambia en un sitio.
+
+| # | Decisión | Dónde se cambia |
+|---|---|---|
+| 1 | Android mínimo 7.0 | `minSdk` en `app/build.gradle.kts` |
+| 2 | Permiso `REORDER_TASKS` y `FocusActivity` exportada | Manifest. Si se quita, quitarlo también de la lista de `ci/comprobar-apk.sh` |
+| 3 | Dibujo del icono de los avisos | `drawable-xxxhdpi/ic_notification_icon.png` |
+| 4 | Imagen de arranque: el icono cuadrado, a 128 dp | `drawable-xxxhdpi/splash.png` |
+| 5 | Barra de navegación inferior del color de la superior | Líneas `NAVIGATION_BAR_…` del manifest |
+| 6 | «Gestionar espacio» y el acceso «Site Settings», en inglés | No se puede quitar sin escribir código |
+| 7 | Avisos de importancia normal | Un `meta-data` en el servicio del manifest: `androidx.browser.trusted.USE_HIGH_PRI_NOTIFICATIONS` con valor `true` |
+| 8 | Sin icono monocromo para los «iconos con tema» | Una capa `<monochrome>` en `ic_launcher.xml` |
+| 9 | Todos los textos de la ficha | `docs/TIENDA.md` |
+
+### 2.6 Lo que depende del portal
+
+No se ha tocado el repositorio del portal. Tres cosas son suyas:
+
+1. **Servir `/.well-known/assetlinks.json`** con la huella de la clave de
+   firma (docs/PUBLICAR.md, paso 6), y dejarlo pasar sin sesión de Cloudflare
+   Access (paso 7). Sin esto la app funciona, pero con barra de direcciones y
+   sin que los enlaces la abran.
+2. **El `badge` de los avisos.** `sw.js` llama a `showNotification` con
+   `badge: '/icons/icon-192.png'`. En Android el *badge* es el icono pequeño
+   del aviso y solo se usa su transparencia; esa imagen es opaca, así que se
+   verá un cuadrado liso. Dentro de la app, además, impide que se use el icono
+   de la app. Arreglo: quitar `badge`, o servir uno monocromo con fondo
+   transparente.
+3. **El título por defecto de un aviso** en `sw.js` es «Portal IoT». Solo se
+   ve si el servidor envía un aviso sin título.
+
+Una observación sobre el encargo: decía que la huella que escribe el workflow
+«hace falta para el fichero de verificación del portal». La que hace falta es
+la de la clave de **firma**, que solo está en la consola de Play; la del
+workflow es la de la clave de **subida**. Está explicado en «Dos claves, dos
+huellas», en docs/PUBLICAR.md.
+
+### 2.7 Mapa de ficheros
+
+Descrito fichero por fichero en el README. En corto:
+
+```
+app/build.gradle.kts                   portal, versión, niveles de API, firma
+app/src/main/AndroidManifest.xml       permisos, arranque, enlaces, avisos
+app/src/main/res/                      nombre, colores, iconos, imagen de arranque
+build.gradle.kts                       versión del plugin de Android
+settings.gradle.kts                    repositorios y módulos
+gradle.properties                      memoria para Gradle
+gradlew, gradlew.bat, gradle/wrapper/  Gradle 9.9.1
+.github/workflows/ci.yml               en cada subida
+.github/workflows/publicacion.yml      a mano o con etiqueta
+ci/comprobar-claves.sh                 ningún almacén de claves
+ci/comprobar-apk.sh                    ficha del APK y permisos
+ci/construir-aab.sh                    firma y huella
+README.md, docs/, CAMBIOS.md           documentación
+.gitignore
+```
+
+### 2.8 Versiones
+
+Las de la tabla 1.4. No ha cambiado ninguna. La compilación en GitHub confirma
+que el plugin 9.5.1 y android-browser-helper 2.7.4 existen en el repositorio
+de Google y funcionan juntos con Gradle 9.9.1.
+
+### 2.9 Lo que le toca al dueño, por orden
+
+1. **Pedir ya el número D-U-N-S**, si no lo tiene. Es lo que más tarda.
+2. **Leer la lista «por confirmar»** (2.5) y decir qué se cambia.
+3. **Instalar el APK de depuración** en un móvil por cable (README). Se verá
+   con barra, pero ya se ven el icono, la pantalla de arranque y los colores.
+4. **Unir la rama a `main`** cuando esté conforme. Hasta entonces el workflow
+   de publicación no se puede lanzar a mano.
+5. **Seguir docs/PUBLICAR.md** del paso 1 al 10: cuenta de Play, app, clave de
+   subida, secretos, etiqueta `v1.0.0`, prueba interna, huella al portal,
+   Cloudflare, ficha y formularios, prueba en el móvil, producción.
+6. **Pasar el punto 2.6** a quien mantiene el portal.
+7. **Antes de producción**, cambiar `portalHost` a `app.proefic.es`: con
+   Cloudflare Access delante los revisores de Google no pueden entrar.
+
+Para una próxima sesión como esta: si el entorno permite `dl.google.com`, se
+puede compilar dentro de la sesión en vez de esperar a GitHub.
