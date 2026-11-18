@@ -12,12 +12,10 @@ Google Play, y nada más.
 ## Qué es una Trusted Web Activity
 
 Una *Trusted Web Activity* (TWA) es una app Android sin pantallas propias: al
-abrirla, le pide a Chrome que muestre una web a pantalla completa, sin barra de
-direcciones. Chrome solo quita la barra si la web y la app demuestran que son
-del mismo dueño: la web publica un fichero (`/.well-known/assetlinks.json`)
-con la huella de la clave que firma la app. Como quien pinta es Chrome, la app
-comparte con él la sesión y los datos, y cada versión nueva del portal llega
-sin volver a publicar la app.
+abrirla, Chrome muestra una web a pantalla completa, sin barra de direcciones.
+Chrome solo quita la barra si la web reconoce a la app: publica un fichero
+(`/.well-known/assetlinks.json`) con la huella de la clave que la firma. La
+sesión y los datos son los de Chrome, y el portal se actualiza sin republicar.
 
 ## Mapa del repositorio
 
