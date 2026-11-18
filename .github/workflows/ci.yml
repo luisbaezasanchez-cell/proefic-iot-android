@@ -48,6 +48,14 @@ jobs:
       - name: Análisis estático y APK de depuración
         run: ./gradlew lint assembleDebug
 
+      # Gradle guarda el informe de lint en un fichero; aquí se copia al
+      # registro para leerlo sin descargar nada. `if: always()` hace que se
+      # enseñe también cuando el paso anterior ha fallado, que es cuando más
+      # falta hace.
+      - name: Informe del análisis estático
+        if: always()
+        run: cat app/build/reports/lint-results-debug.txt || echo "No hay informe - el análisis no llegó a ejecutarse."
+
       - name: Ficha del APK y permisos
         run: ci/comprobar-apk.sh app/build/outputs/apk/debug/app-debug.apk
 
