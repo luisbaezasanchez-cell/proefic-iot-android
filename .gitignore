@@ -1,0 +1,22 @@
+# Lo que Gradle genera al compilar.
+.gradle/
+build/
+
+# Ruta del SDK de Android en cada ordenador. La escribe Android Studio.
+local.properties
+
+# Ajustes de Android Studio / IntelliJ.
+.idea/
+*.iml
+
+# Almacenes de claves y claves privadas. No se suben nunca: la clave de subida
+# vive fuera del repositorio y llega a GitHub Actions como secreto.
+# ci/comprobar-claves.sh falla si alguno llega a entrar.
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.bks
+*.pem
+*.key
+*.b64
