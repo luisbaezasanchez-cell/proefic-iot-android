@@ -1,0 +1,61 @@
+# Integración continua. Se ejecuta sola en cada subida (push) a cualquier rama.
+#
+# Qué hace: comprueba que no hay claves en el repositorio, pasa el análisis
+# estático de Android (lint), compila el APK de depuración y lo deja para
+# descargar. Si algo falla, el commit aparece con una cruz roja.
+#
+# Dónde se ve: pestaña "Actions" del repositorio en GitHub. El APK está al pie
+# de cada ejecución, en "Artifacts".
+#
+# Las versiones de las acciones (@v7) se comprobaron el 18-11-2026.
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+
+# El workflow solo necesita leer el código.
+permissions:
+  contents: read
+
+jobs:
+  compilar:
+    name: Analizar y compilar el APK de depuración
+    # Máquina de GitHub. Trae instalados el SDK de Android y varios JDK.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Comprobar que no hay almacenes de claves
+        run: ci/comprobar-claves.sh
+
+      # El plugin de Android para Gradle se compila con JDK 17. La máquina trae
+      # varios y dice dónde está cada uno en una variable JAVA_HOME_<n>_X64.
+      - name: Usar el JDK 17 de la máquina
+        run: |
+          if [ -z "${JAVA_HOME_17_X64:-}" ]; then
+            echo "::error::Esta máquina no trae JDK 17 (falta JAVA_HOME_17_X64)."
+            exit 1
+          fi
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+
+      # Los mismos dos pasos que se hacen en un ordenador: `lint` es el
+      # análisis estático y `assembleDebug` construye el APK de depuración.
+      - name: Análisis estático y APK de depuración
+        run: ./gradlew lint assembleDebug
+
+      - name: Ficha del APK y permisos
+        run: ci/comprobar-apk.sh app/build/outputs/apk/debug/app-debug.apk
+
+      # `archive: false` sube el fichero tal cual, sin meterlo en un zip: lo
+      # que se descarga es directamente app-debug.apk.
+      - name: Guardar el APK para descargarlo
+        uses: actions/upload-artifact@v7
+        with:
+          path: app/build/outputs/apk/debug/app-debug.apk
+          archive: false
+          if-no-files-found: error
