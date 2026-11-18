@@ -303,6 +303,12 @@ En el contenedor de la sesión:
 Las claves de estas pruebas eran desechables, se crearon en directorios
 temporales y no están en el repositorio ni en la conversación.
 
+En la pestaña Actions queda **una ejecución en rojo**, la 44383300838 del
+workflow temporal. No es un fallo de la app: su último paso buscaba en la
+salida el resumen de lint, que ya no se imprime desde que quité la opción
+obsoleta. De ahí salió el paso «Informe del análisis estático». La compilación
+de esa misma ejecución terminó bien.
+
 ### 2.4 Qué no se ha comprobado
 
 - **Nada en un móvil.** Que abra sin barra, la pantalla de arranque, los
