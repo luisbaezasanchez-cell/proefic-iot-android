@@ -84,12 +84,6 @@ android {
             signingConfig = signingConfigs.findByName("subida")
         }
     }
-
-    // El análisis estático escribe sus avisos en la salida de la compilación,
-    // para leerlos en el registro de GitHub Actions sin descargar nada.
-    lint {
-        textReport = true
-    }
 }
 
 dependencies {
