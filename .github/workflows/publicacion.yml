@@ -1,0 +1,82 @@
+# Paquete de publicación: el fichero .aab firmado que se sube a Google Play.
+#
+# Cuándo se ejecuta:
+#   - al subir una etiqueta que empiece por "v" (por ejemplo v1.0.0), o
+#   - a mano: pestaña "Actions" > "Publicación" > "Run workflow". El botón solo
+#     aparece cuando este fichero está en la rama principal (main).
+#
+# Qué hace: firma con la clave de subida, que llega por dos secretos del
+# repositorio, comprueba la firma, escribe en el registro la huella SHA-256
+# del certificado y deja el .aab para descargar. NO lo sube a Google Play: eso
+# se hace a mano en la consola (docs/PUBLICAR.md).
+#
+# Secretos (Settings > Secrets and variables > Actions):
+#   UPLOAD_KEYSTORE_BASE64    el almacén de claves PKCS12, codificado en base64
+#   UPLOAD_KEYSTORE_PASSWORD  su contraseña
+# El alias de la clave dentro del almacén es siempre "upload".
+#
+# Las versiones de las acciones (@v7) se comprobaron el 18-11-2026.
+
+name: Publicación
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  paquete:
+    name: Construir el AAB firmado
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      # Va lo primero: si falta un secreto, el trabajo se para aquí, antes de
+      # descargar o compilar nada.
+      - name: Comprobar que están los secretos
+        env:
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+        run: |
+          faltan=""
+          [ -n "$UPLOAD_KEYSTORE_BASE64" ] || faltan="$faltan UPLOAD_KEYSTORE_BASE64"
+          [ -n "$UPLOAD_KEYSTORE_PASSWORD" ] || faltan="$faltan UPLOAD_KEYSTORE_PASSWORD"
+          if [ -n "$faltan" ]; then
+            echo "::error::Faltan secretos en el repositorio:$faltan. No se ha construido nada. Cómo cargarlos: docs/PUBLICAR.md, paso 4."
+            exit 1
+          fi
+          echo "Los dos secretos están cargados."
+
+      - name: Descargar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Comprobar que no hay almacenes de claves
+        run: ci/comprobar-claves.sh
+
+      - name: Usar el JDK 17 de la máquina
+        run: |
+          if [ -z "${JAVA_HOME_17_X64:-}" ]; then
+            echo "::error::Esta máquina no trae JDK 17 (falta JAVA_HOME_17_X64)."
+            exit 1
+          fi
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+
+      # Los secretos solo se entregan a este paso. El guion comprueba la clave,
+      # compila, comprueba la firma y escribe la huella.
+      - name: Construir y firmar el AAB
+        env:
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+        run: ci/construir-aab.sh
+
+      # `archive: false` sube el fichero tal cual, sin meterlo en un zip: lo
+      # que se descarga es directamente app-release.aab.
+      - name: Guardar el AAB para descargarlo
+        uses: actions/upload-artifact@v7
+        with:
+          path: app/build/outputs/bundle/release/app-release.aab
+          archive: false
+          if-no-files-found: error
