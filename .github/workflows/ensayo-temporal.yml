@@ -1,9 +1,8 @@
 # TEMPORAL. Se borra en cuanto se haya visto pasar.
 #
-# Ensaya en esta rama lo que no se puede lanzar sin estar en main ni sin los
-# secretos de verdad: el guion ci/construir-aab.sh, con una clave desechable
-# que se crea aquí mismo y desaparece con la máquina. También vuelca el
-# manifest final del APK de depuración, para ver qué le suman las bibliotecas.
+# Segunda y última comprobación: de dónde sale el aviso de Gradle "Deprecated
+# Gradle features were used in this build". Si es de los ficheros de este
+# repositorio hay que corregirlo; si es del plugin de Android, no.
 
 name: Ensayo temporal
 
@@ -24,45 +23,9 @@ jobs:
       - name: Usar el JDK 17 de la máquina
         run: echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
 
-      - name: Sin secretos, el guion se para sin construir nada
+      - name: Avisos de obsolescencia, con su origen
         run: |
-          if ci/construir-aab.sh; then
-            echo "::error::Debería haber fallado."
-            exit 1
-          fi
-          test ! -e app/build
-
-      - name: Con una contraseña que no es, se para antes de compilar
-        run: |
-          export UPLOAD_KEYSTORE_PASSWORD="desechable-$RANDOM$RANDOM"
-          keytool -genkeypair -keystore "$RUNNER_TEMP/ensayo.p12" -storetype PKCS12 -alias upload -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Ensayo" -storepass:env UPLOAD_KEYSTORE_PASSWORD
-          export UPLOAD_KEYSTORE_BASE64="$(base64 "$RUNNER_TEMP/ensayo.p12")"
-          UPLOAD_KEYSTORE_PASSWORD="otra-distinta"
-          if ci/construir-aab.sh; then
-            echo "::error::Debería haber fallado."
-            exit 1
-          fi
-          test ! -e app/build
-
-      - name: Con una clave desechable, construye, firma y escribe la huella
-        run: |
-          export UPLOAD_KEYSTORE_PASSWORD="desechable-$RANDOM$RANDOM"
-          keytool -genkeypair -keystore "$RUNNER_TEMP/ensayo2.p12" -storetype PKCS12 -alias upload -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Ensayo" -storepass:env UPLOAD_KEYSTORE_PASSWORD
-          export UPLOAD_KEYSTORE_BASE64="$(base64 "$RUNNER_TEMP/ensayo2.p12")"
-          ci/construir-aab.sh
-          ls -l app/build/outputs/bundle/release/
-          unzip -l app/build/outputs/bundle/release/app-release.aab | tail -n 25
-
-      - name: Sin clave, bundleRelease deja un paquete sin firmar
-        run: |
-          ./gradlew -q bundleRelease
-          keytool -printcert -jarfile app/build/outputs/bundle/release/app-release.aab || true
-
-      - name: Manifest final y asset_statements del APK de depuración
-        run: |
-          ./gradlew -q assembleDebug
-          aapt2=$(find "$ANDROID_HOME/build-tools" -name aapt2 | sort -V | tail -n 1)
-          apk=app/build/outputs/apk/debug/app-debug.apk
-          "$aapt2" dump resources "$apk" | grep -A 2 "string/asset_statements"
-          "$aapt2" dump xmltree "$apk" --file AndroidManifest.xml | grep -E "^ *E: |:name\(|:exported\(|:value\(|:host\(|:authorities\(|:permission\(" | sed 's/http:\/\/schemas.android.com\/apk\/res\/android://; s/(0x[0-9a-f]*)//; s/ (Raw: .*//'
-          ./gradlew -q app:dependencies --configuration debugRuntimeClasspath | grep -E "^[+\\\\]|^\|    [+\\\\]" | head -n 60
+          ./gradlew --warning-mode all lint assembleDebug bundleRelease > salida.txt 2>&1 || { tail -n 40 salida.txt; exit 1; }
+          grep -n -i -B 1 -A 6 "deprecat" salida.txt | head -n 80 || echo "Ningún aviso de obsolescencia."
+          grep -n "errors, .* warnings" salida.txt
+          ls -l app/build/outputs/bundle/release/ app/build/outputs/apk/debug/
