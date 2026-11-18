@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    El manifest es la ficha que Android lee al instalar la app: qué permisos
+    pide, qué icono tiene y qué piezas ("componentes") la forman.
+
+    Esta app no tiene código propio. Todos los componentes son clases de la
+    biblioteca android-browser-helper (com.google.androidbrowserhelper…) y
+    aquí solo se configuran.
+
+    Dos valores no están escritos aquí sino que los rellena Gradle al compilar:
+      ${portalHost}     el nombre del portal; se define en app/build.gradle.kts
+      ${applicationId}  el paquete de la app, es.proefic.iot
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Permisos. Son los dos únicos, y ninguno de los dos pide ubicación,
+        cámara, contactos ni nada del usuario.
+
+        POST_NOTIFICATIONS: mostrar avisos. Desde Android 13 hay que pedirlo;
+        el diálogo sale cuando el portal pide permiso para enviar avisos.
+
+        REORDER_TASKS: traer la app al frente cuando se toca un aviso y la app
+        ya estaba abierta. Lo exige la biblioteca para FocusActivity (más
+        abajo). Se concede al instalar, sin preguntar.
+
+        La cámara para leer códigos QR no aparece aquí a propósito: la usa
+        Chrome, con su propio permiso, igual que en cualquier página web.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REORDER_TASKS" />
+
+    <!--
+        allowBackup="false": la app no guarda datos del usuario (la sesión del
+        portal vive en Chrome), así que no hay nada que copiar a la nube.
+
+        manageSpaceActivity: en Ajustes > Aplicaciones > Proefic IoT >
+        Almacenamiento, el botón pasa a ser "Gestionar espacio" y abre los
+        datos del portal en Chrome, que es donde están de verdad.
+
+        El tema transparente hace que, al tocar el icono, no se vea una
+        pantalla en blanco antes de la de arranque.
+    -->
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:manageSpaceActivity="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Translucent.NoTitleBar">
+
+        <!--
+            Declaración de la app hacia la web: "esta app está asociada a este
+            sitio". La declaración contraria (la web hacia la app) es el
+            fichero /.well-known/assetlinks.json que sirve el portal; hacen
+            falta las dos. El texto lo genera Gradle porque lleva dentro el
+            nombre del portal.
+        -->
+        <meta-data
+            android:name="asset_statements"
+            android:resource="@string/asset_statements" />
+
+        <!--
+            La actividad de arranque. Es lo que se ejecuta al tocar el icono o
+            al abrir un enlace del portal: busca un navegador compatible
+            (Chrome), le pide que abra el portal a pantalla completa y termina.
+        -->
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+            android:alwaysRetainTaskState="true"
+            android:exported="true"
+            android:label="@string/app_name">
+
+            <!-- Dirección que se abre al tocar el icono. -->
+            <meta-data
+                android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                android:value="https://${portalHost}/" />
+
+            <!-- Color de la barra superior, con tema claro y con tema oscuro. -->
+            <meta-data
+                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+                android:resource="@color/barra" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR_DARK"
+                android:resource="@color/barra_oscura" />
+
+            <!-- Color de la barra de navegación inferior (la de atrás / inicio). -->
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
+                android:resource="@color/barra" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR_DARK"
+                android:resource="@color/barra_oscura" />
+
+            <!--
+                Línea que separa esa barra del contenido. Se le da el mismo
+                color que a la barra para que no se vea: si no se indica, con
+                tema oscuro la biblioteca usa el color claro.
+                "androix" está escrito así en la biblioteca; no es una errata
+                de este fichero y no hay que corregirlo.
+            -->
+            <meta-data
+                android:name="androix.browser.trusted.NAVIGATION_BAR_DIVIDER_COLOR"
+                android:resource="@color/barra" />
+            <meta-data
+                android:name="androix.browser.trusted.NAVIGATION_BAR_DIVIDER_COLOR_DARK"
+                android:resource="@color/barra_oscura" />
+
+            <!--
+                Pantalla de arranque: una imagen centrada sobre un color, que
+                se desvanece en 300 ms cuando el portal ha cargado. La app se
+                la pasa a Chrome a través del proveedor de ficheros de más
+                abajo; por eso hay que decirle aquí cómo se llama.
+            -->
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
+                android:resource="@drawable/splash" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
+                android:resource="@color/fondo_arranque" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_FADE_OUT_DURATION"
+                android:value="300" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
+                android:value="${applicationId}.fileprovider" />
+
+            <!--
+                Qué hacer si el móvil no tiene un navegador que admita este
+                tipo de app: abrir el portal en una pestaña personalizada (una
+                ventana de navegador con barra de direcciones, dentro de la
+                app). Es también el valor por defecto de la biblioteca.
+            -->
+            <meta-data
+                android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
+                android:value="customtabs" />
+
+            <!--
+                No se fija la orientación (SCREEN_ORIENTATION): la pantalla
+                gira según el ajuste del móvil.
+            -->
+
+            <!-- Esta actividad es la que aparece como icono de la app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+                Enlaces. Cualquier dirección https del portal abre la app en
+                vez del navegador: el QR de una etiqueta (/d/nuevo?code=…), una
+                invitación (/compartir?code=…) y todas las demás.
+
+                autoVerify="true" pide a Android que compruebe, al instalar,
+                que el portal reconoce a esta app (assetlinks.json). Si la
+                comprobación falla, los enlaces siguen abriéndose en el
+                navegador.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="${portalHost}"
+                    android:scheme="https" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            Trae la app al frente. Chrome la llama cuando se toca un aviso y
+            la app ya estaba abierta por detrás. La biblioteca pide que esté
+            exportada y que la app tenga el permiso REORDER_TASKS.
+        -->
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.FocusActivity"
+            android:exported="true" />
+
+        <!--
+            Muestra el diálogo de Android "¿Permitir que Proefic IoT te envíe
+            notificaciones?". Chrome la llama cuando el portal pide permiso
+            para los avisos.
+        -->
+        <activity android:name="com.google.androidbrowserhelper.trusted.NotificationPermissionRequestActivity" />
+
+        <!--
+            Abre en Chrome los datos y permisos del portal. Se llega desde el
+            botón "Gestionar espacio" de los ajustes y desde el acceso "Site
+            Settings" que aparece al mantener pulsado el icono.
+
+            Hay que declararla aunque no se quiera ese acceso: la biblioteca la
+            activa cada vez que arranca la app, y Android da error si se
+            activa un componente que no está en el manifest.
+        -->
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
+            android:excludeFromRecents="true"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.customtabs.trusted.MANAGE_SPACE_URL"
+                android:value="https://${portalHost}/" />
+        </activity>
+
+        <!--
+            Proveedor de ficheros: la forma estándar de Android de dejar que
+            otra app (aquí, Chrome) lea un fichero concreto de esta. Solo
+            comparte la carpeta descrita en res/xml/filepaths.xml, que contiene
+            la imagen de arranque.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
+
+        <!--
+            Avisos delegados. Cuando el portal envía un aviso push, Chrome no
+            lo muestra él: se lo entrega a este servicio y lo muestra la app,
+            con su nombre y, si el portal no manda otro, con el icono pequeño
+            indicado aquí.
+
+            Está exportado porque quien lo llama es Chrome. El servicio
+            comprueba por su cuenta que quien llama es el navegador que abrió
+            el portal.
+        -->
+        <service
+            android:name="com.google.androidbrowserhelper.trusted.DelegationService"
+            android:enabled="true"
+            android:exported="true">
+            <meta-data
+                android:name="android.support.customtabs.trusted.SMALL_ICON"
+                android:resource="@drawable/ic_notification_icon" />
+            <intent-filter>
+                <action android:name="android.support.customtabs.trusted.TRUSTED_WEB_ACTIVITY_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
