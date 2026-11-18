@@ -70,10 +70,24 @@ Google Play exige desde el 31-08-2026. El de compilación es el mismo.
 **D5. Android mínimo: 7.0 (nivel 24).** Es el mínimo de la biblioteca. No
 restrinjo más por mi cuenta. *Por confirmar.*
 
-**D6. Permisos: uno solo, `POST_NOTIFICATIONS`.** Android 13 y posteriores lo
-exigen para mostrar cualquier aviso. Sin ubicación, sin pagos, sin analítica:
-no se añaden los módulos `locationdelegation` ni `billing` de la biblioteca.
-No se declara `INTERNET`: quien navega es Chrome, no la app.
+**D6. Permisos: dos, y ninguno toca datos del usuario.**
+
+- `POST_NOTIFICATIONS`: Android 13 y posteriores lo exigen para mostrar
+  cualquier aviso.
+- `REORDER_TASKS`: traer la app al frente cuando se toca un aviso y ya estaba
+  abierta. Es de nivel «normal»: se concede al instalar, sin preguntar.
+  *Añadido durante la implementación; el primer borrador de este diseño decía
+  «un solo permiso».* Desde junio de 2026 la actividad de la biblioteca que
+  hace ese trabajo (`FocusActivity`) llama a `moveTaskToFront`, y su
+  documentación dice que la app debe declarar este permiso y exportar la
+  actividad. La plantilla de Bubblewrap 1.27.0 no lo hace. Lo declaro porque
+  «tocar el aviso abre el dispositivo» es un requisito y no puedo probarlo en
+  un móvil; si la prueba a mano funciona igual sin él, se puede quitar.
+  *Por confirmar.*
+
+Sin ubicación, sin pagos, sin analítica: no se añaden los módulos
+`locationdelegation` ni `billing` de la biblioteca. No se declara `INTERNET`:
+quien navega es Chrome, no la app.
 
 *Cámara.* El envoltorio **no declara nada**. Lo que he encontrado:
 
@@ -171,6 +185,9 @@ El alias es siempre `upload`. En un almacén PKCS12 la contraseña de la clave
 es la del almacén, así que no hace falta un tercer secreto. La firma la hace
 Gradle con la configuración estándar de Android (`signingConfigs`), leyendo
 variables de entorno; si faltan, el workflow se detiene en su primer paso.
+Los pasos de firma están en un guion, `ci/construir-aab.sh`, y no dentro del
+workflow, para poder ensayarlos con una clave desechable sin tener los
+secretos de verdad.
 
 **D16. Comprobación de almacenes de claves.** Un guion de shell,
 `ci/comprobar-claves.sh`, que mira los ficheros que git tiene registrados:
@@ -193,7 +210,8 @@ no puedo compilar aquí.
 4. Color de la barra de navegación inferior igual al de la superior (D11).
 5. «Gestionar espacio» y el acceso «Site Settings» en inglés (D12).
 6. Importancia normal de los avisos (D7).
-7. Todos los textos de `docs/TIENDA.md`.
+7. El permiso `REORDER_TASKS` (D6).
+8. Todos los textos de `docs/TIENDA.md`.
 
 ### 1.4 Versiones fijadas
 
