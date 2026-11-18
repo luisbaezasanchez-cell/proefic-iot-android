@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Colores que cambian cuando el móvil está en tema oscuro. Android usa este
+    fichero en vez de values/colors.xml para los nombres que aparecen aquí.
+-->
+<resources>
+    <!-- Fondo de la pantalla de arranque con el tema oscuro. -->
+    <color name="fondo_arranque">#111110</color>
+</resources>

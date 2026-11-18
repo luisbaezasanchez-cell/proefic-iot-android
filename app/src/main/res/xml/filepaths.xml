@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Carpeta que la app comparte con Chrome. Solo se usa para pasarle la imagen
+    de la pantalla de arranque: la biblioteca la guarda en twa_splash/ y Chrome
+    la lee de ahí para seguir mostrándola mientras carga el portal.
+
+    El nombre y la ruta los fija android-browser-helper; no se pueden cambiar.
+-->
+<paths>
+    <files-path
+        name="twa_splash"
+        path="twa_splash/" />
+</paths>

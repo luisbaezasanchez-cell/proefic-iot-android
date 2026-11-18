@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Colores de la app. Son los del portal; si el portal cambia los suyos, se
+    cambian aquí y se publica una versión nueva.
+-->
+<resources>
+    <!-- Barra superior (y barra de navegación inferior) con el tema claro. -->
+    <color name="barra">#FCFCFB</color>
+
+    <!-- Las mismas barras con el tema oscuro. Quien elige entre una y otra es
+         Chrome, por eso son dos colores con nombre distinto. -->
+    <color name="barra_oscura">#1A1A19</color>
+
+    <!-- Fondo de la pantalla de arranque con el tema claro. El del tema oscuro
+         está en values-night/colors.xml con el mismo nombre: aquí quien elige
+         es Android. -->
+    <color name="fondo_arranque">#F1F0EC</color>
+
+    <!-- Color del borde de las imágenes del icono. Rellena el margen del icono
+         adaptativo. -->
+    <color name="icono_fondo">#256ABF</color>
+</resources>

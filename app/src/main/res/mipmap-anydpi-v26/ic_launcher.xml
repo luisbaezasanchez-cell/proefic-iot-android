@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Icono de la app en Android 8 y posteriores ("icono adaptativo": el sistema
+    lo recorta en círculo, cuadrado redondeado, etc. según el móvil).
+
+    Un icono adaptativo son dos capas de 108 x 108 dp de las que solo se ve el
+    centro (72 dp). La imagen "maskable" del portal está pensada para la web,
+    donde la zona segura es el 80 % central; con un margen de 8,5 dp por lado
+    esa zona segura coincide con lo que Android enseña. Es la misma medida que
+    usa Bubblewrap.
+
+    Todo va en la capa de fondo: primero el color del borde de la imagen, para
+    que el margen no se note, y encima la imagen.
+
+    En Android 7 no existen los iconos adaptativos y se usa
+    mipmap-xxxhdpi/ic_launcher.png.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background>
+        <layer-list>
+            <item android:drawable="@color/icono_fondo" />
+            <item
+                android:bottom="8.5dp"
+                android:drawable="@mipmap/ic_launcher_maskable"
+                android:left="8.5dp"
+                android:right="8.5dp"
+                android:top="8.5dp" />
+        </layer-list>
+    </background>
+    <foreground android:drawable="@android:color/transparent" />
+</adaptive-icon>
